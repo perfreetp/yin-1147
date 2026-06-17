@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import type { InstrumentItem } from '@/types';
 import { showToast, generateId } from '@/utils';
+import { useAppStore } from '@/store';
 
 interface FormItem extends InstrumentItem {
   tempQuantity: number;
@@ -20,6 +21,8 @@ const presetItems: Array<{ name: string; category: string }> = [
 ];
 
 const HandoverCreatePage: React.FC = () => {
+  const addHandover = useAppStore(state => state.addHandover);
+
   const [items, setItems] = useState<FormItem[]>([
     { id: generateId(), name: '牙科镊子', category: '基础器械', quantity: 10, tempQuantity: 10 },
     { id: generateId(), name: '牙科探针', category: '基础器械', quantity: 10, tempQuantity: 10 }
@@ -111,6 +114,13 @@ const HandoverCreatePage: React.FC = () => {
       showToast('请上传封箱照片');
       return;
     }
+    const newRecord = addHandover({
+      clinicName: '阳光口腔诊所',
+      items: items.map(({ tempQuantity, ...item }) => item),
+      sealPhotos: photos,
+      remark: remark || undefined
+    });
+    console.log('[HandoverCreate] 新交接单:', newRecord.handoverNo);
     showToast('提交成功', 'success');
     setTimeout(() => Taro.navigateBack(), 1500);
   };

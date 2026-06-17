@@ -80,6 +80,7 @@ export interface DeliveryRecord {
   receivedAt?: string;
   receiverName?: string;
   signatureImage?: string;
+  checkedQuantity?: number;
 }
 
 export interface TraceRecord {

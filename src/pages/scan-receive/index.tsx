@@ -1,34 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
-import { mockHandoverList } from '@/data/handover';
+import { useAppStore } from '@/store';
 import type { HandoverRecord } from '@/types';
 import { formatDate, showToast, copyToClipboard } from '@/utils';
 
 const ScanReceivePage: React.FC = () => {
+  const handoverList = useAppStore(state => state.handoverList);
+  const receiveHandover = useAppStore(state => state.receiveHandover);
   const [scanned, setScanned] = useState(false);
   const [record, setRecord] = useState<HandoverRecord | null>(null);
+  const [scannedIds, setScannedIds] = useState<string[]>([]);
+
+  const pendingList = useMemo(() => {
+    return handoverList.filter(h => h.status === 'pending' && !scannedIds.includes(h.id));
+  }, [handoverList, scannedIds]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      const pendingRecord = mockHandoverList.find(h => h.status === 'pending');
-      if (pendingRecord) {
-        setRecord(pendingRecord);
+      if (pendingList.length > 0) {
+        setRecord(pendingList[0]);
         setScanned(true);
+      } else {
+        const allPending = handoverList.filter(h => h.status === 'pending');
+        if (allPending.length > 0) {
+          setRecord(allPending[0]);
+          setScanned(true);
+        }
       }
     }, 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [pendingList, handoverList]);
 
   const handleScanAgain = () => {
     setScanned(false);
     setRecord(null);
     showToast('请将二维码对准扫描框', 'loading');
     setTimeout(() => {
-      const pendingRecord = mockHandoverList.find(h => h.status === 'pending' && h.id !== record?.id);
-      const target = pendingRecord || mockHandoverList[1];
+      const remaining = pendingList.filter(r => r.id !== record?.id);
+      const target = remaining.length > 0 ? remaining[0] : handoverList.find(h => h.status === 'pending');
       if (target) {
         setRecord(target);
         setScanned(true);
@@ -49,6 +61,8 @@ const ScanReceivePage: React.FC = () => {
   const handleConfirmReceive = () => {
     if (!record) return;
     console.log('[ScanReceive] 确认接收:', record.handoverNo);
+    receiveHandover(record.id, '张师傅');
+    setScannedIds([...scannedIds, record.id]);
     showToast('入库成功', 'success');
     setTimeout(() => {
       Taro.navigateBack();

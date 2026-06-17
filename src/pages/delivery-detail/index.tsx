@@ -5,17 +5,20 @@ import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
 import InfoCard from '@/components/InfoCard';
 import StepIndicator from '@/components/StepIndicator';
-import { mockDeliveryList } from '@/data/delivery';
+import { useAppStore } from '@/store';
 import type { DeliveryRecord } from '@/types';
 import { formatDate, showToast, getDaysUntilExpire } from '@/utils';
 
 const DeliveryDetailPage: React.FC = () => {
   const router = useRouter();
   const id = router.params.id;
+  const deliveryList = useAppStore(state => state.deliveryList);
+  const receiveDelivery = useAppStore(state => state.receiveDelivery);
+  const markDeliveryDelivered = useAppStore(state => state.markDeliveryDelivered);
 
   const record = useMemo<DeliveryRecord | undefined>(() => {
-    return mockDeliveryList.find(d => d.id === id) || mockDeliveryList[0];
-  }, [id]);
+    return deliveryList.find(d => d.id === id) || deliveryList[0];
+  }, [deliveryList, id]);
 
   if (!record) {
     return (
@@ -74,16 +77,39 @@ const DeliveryDetailPage: React.FC = () => {
 
   const handleRecheck = () => {
     console.log('[DeliveryDetail] 收货复点');
-    showToast('进入复点流程');
+    Taro.showModal({
+      title: '收货复点',
+      editable: true,
+      placeholderText: '请输入复点数量',
+      content: String(record.totalQuantity),
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const checkedQty = parseInt(res.content, 10) || record.totalQuantity;
+          Taro.showModal({
+            title: '确认复点结果',
+            content: `复点数量：${checkedQty} 件\n${checkedQty === record.totalQuantity ? '数量一致' : checkedQty > record.totalQuantity ? '数量多出' : `数量缺少 ${record.totalQuantity - checkedQty} 件`}`,
+            success: (modalRes) => {
+              if (modalRes.confirm) {
+                showToast('复点完成', 'success');
+              }
+            }
+          });
+        }
+      }
+    });
   };
 
   const handleSign = () => {
     console.log('[DeliveryDetail] 确认签收');
     Taro.showModal({
       title: '确认签收',
-      content: '请确认包裹数量无误后签收',
+      editable: true,
+      placeholderText: '请输入签收人姓名',
+      content: '王护士',
       success: (res) => {
         if (res.confirm) {
+          const receiver = res.content || '王护士';
+          receiveDelivery(record.id, receiver, record.totalQuantity);
           showToast('签收成功', 'success');
         }
       }

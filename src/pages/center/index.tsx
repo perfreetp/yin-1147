@@ -3,27 +3,31 @@ import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
-import { mockHandoverList } from '@/data/handover';
+import { useAppStore } from '@/store';
 import type { HandoverRecord } from '@/types';
 import { formatDate, showToast } from '@/utils';
 
 const CenterPage: React.FC = () => {
+  const handoverList = useAppStore(state => state.handoverList);
+  const receiveHandover = useAppStore(state => state.receiveHandover);
+
   const pendingList = useMemo(() => {
-    return mockHandoverList.filter(h => h.status === 'pending');
-  }, []);
+    return handoverList.filter(h => h.status === 'pending');
+  }, [handoverList]);
 
   const receivedList = useMemo(() => {
-    return mockHandoverList.filter(h => h.status !== 'pending').slice(0, 4);
-  }, []);
+    return handoverList.filter(h => h.status !== 'pending').slice(0, 4);
+  }, [handoverList]);
 
   const stats = useMemo(() => {
-    const today = mockHandoverList.filter(h => h.createdAt.startsWith('2026-06-18'));
+    const todayStr = formatDate(new Date(), 'YYYY-MM-DD');
+    const today = handoverList.filter(h => h.createdAt.startsWith(todayStr));
     return {
       today: today.length,
       pending: pendingList.length,
       received: today.filter(h => h.status !== 'pending').length
     };
-  }, [pendingList]);
+  }, [handoverList, pendingList]);
 
   const handleScanReceive = () => {
     console.log('[Center] 扫码入库');
@@ -38,6 +42,7 @@ const CenterPage: React.FC = () => {
   const handleQuickReceive = (item: HandoverRecord, e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('[Center] 快速接收:', item.handoverNo);
+    receiveHandover(item.id, '张师傅');
     showToast('已确认接收', 'success');
   };
 

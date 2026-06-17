@@ -4,15 +4,19 @@ import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
-import { mockTraceList, mockReconciliationList } from '@/data/trace';
+import { useAppStore } from '@/store';
 import type { TraceRecord, ReconciliationRecord } from '@/types';
-import { formatDate, getDaysUntilExpire, showToast } from '@/utils';
+import { formatDate, getDaysUntilExpire, showToast, copyToClipboard } from '@/utils';
 
 const TracePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'packages' | 'reconciliation'>('packages');
+  const traceList = useAppStore(state => state.traceList);
+  const reconciliationList = useAppStore(state => state.reconciliationList);
+  const usePackage = useAppStore(state => state.usePackage);
+  const exportReconciliation = useAppStore(state => state.exportReconciliation);
 
-  const packageList = useMemo(() => mockTraceList, []);
-  const reconciliationList = useMemo(() => mockReconciliationList, []);
+  const packageList = useMemo(() => traceList, [traceList]);
+  const reconList = useMemo(() => reconciliationList, [reconciliationList]);
 
   const handleScanTrace = () => {
     console.log('[Trace] 扫码追溯');
@@ -21,7 +25,30 @@ const TracePage: React.FC = () => {
 
   const handlePatientUse = () => {
     console.log('[Trace] 患者使用回填');
-    showToast('患者使用回填功能');
+    const validPackages = traceList.filter(t => t.status === 'valid');
+    if (validPackages.length === 0) {
+      showToast('暂无可用无菌包');
+      return;
+    }
+    Taro.showActionSheet({
+      itemList: validPackages.map(p => `${p.packageNo} - ${p.packageName}`),
+      success: (res) => {
+        const target = validPackages[res.tapIndex];
+        Taro.showModal({
+          title: '患者使用回填',
+          editable: true,
+          placeholderText: '请输入患者姓名',
+          content: '',
+          success: (modalRes) => {
+            if (modalRes.confirm && modalRes.content) {
+              const patientName = modalRes.content;
+              usePackage(target.id, patientName, '张医生');
+              showToast('使用记录已保存', 'success');
+            }
+          }
+        });
+      }
+    });
   };
 
   const handlePackageClick = (item: TraceRecord) => {
@@ -34,8 +61,17 @@ const TracePage: React.FC = () => {
   const handleExport = (item: ReconciliationRecord, e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('[Trace] 导出对账凭证:', item.month);
-    showToast('凭证导出中...', 'loading');
-    setTimeout(() => showToast('导出成功', 'success'), 1500);
+    const content = exportReconciliation(item.id);
+    if (content) {
+      copyToClipboard(content);
+      Taro.showModal({
+        title: '凭证已生成',
+        content: '对账凭证已复制到剪贴板，可粘贴保存。',
+        showCancel: false
+      });
+    } else {
+      showToast('导出失败');
+    }
   };
 
   const renderExpireInfo = (item: TraceRecord) => {
@@ -160,7 +196,7 @@ const TracePage: React.FC = () => {
               月度对账
               <Text className={styles.sectionExtra}>查看全部</Text>
             </View>
-            {reconciliationList.map(item => (
+            {reconList.map(item => (
               <View key={item.id} className={styles.reconciliationItem}>
                 <View className={styles.reconHeader}>
                   <Text className={styles.reconMonth}>{item.month} 月账单</Text>

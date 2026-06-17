@@ -5,17 +5,21 @@ import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
 import StepIndicator from '@/components/StepIndicator';
 import InfoCard from '@/components/InfoCard';
-import { mockBatchList } from '@/data/batch';
+import { useAppStore } from '@/store';
 import type { BatchRecord } from '@/types';
 import { formatDate, showToast } from '@/utils';
 
 const BatchDetailPage: React.FC = () => {
   const router = useRouter();
   const id = router.params.id;
+  const batchList = useAppStore(state => state.batchList);
+  const updateBatchStep = useAppStore(state => state.updateBatchStep);
+  const splitBatch = useAppStore(state => state.splitBatch);
+  const mergeBatches = useAppStore(state => state.mergeBatches);
 
   const record = useMemo<BatchRecord | undefined>(() => {
-    return mockBatchList.find(b => b.id === id) || mockBatchList[0];
-  }, [id]);
+    return batchList.find(b => b.id === id) || batchList[0];
+  }, [batchList, id]);
 
   if (!record) {
     return (
@@ -25,14 +29,63 @@ const BatchDetailPage: React.FC = () => {
     );
   }
 
+  const currentStepIndex = useMemo(() => {
+    return record.steps.findIndex(s => s.status === 'processing');
+  }, [record]);
+
+  const nextStep = useMemo(() => {
+    if (currentStepIndex >= 0) {
+      return record.steps[currentStepIndex];
+    }
+    const firstPending = record.steps.find(s => s.status === 'pending');
+    return firstPending || null;
+  }, [record, currentStepIndex]);
+
   const handleMerge = () => {
     console.log('[BatchDetail] 合包操作');
-    showToast('合包功能');
+    const availableBatches = batchList.filter(
+      b => b.id !== record.id && b.status !== 'completed' && b.status !== 'exception'
+    );
+    if (availableBatches.length === 0) {
+      showToast('暂无其他批次可合并');
+      return;
+    }
+    Taro.showActionSheet({
+      itemList: availableBatches.map(b => `${b.batchNo} (${b.totalQuantity}件)`),
+      success: (res) => {
+        const targetBatch = availableBatches[res.tapIndex];
+        Taro.showModal({
+          title: '确认合包',
+          content: `确定将 ${record.batchNo} 与 ${targetBatch.batchNo} 合并为一个批次？`,
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              mergeBatches([record.id, targetBatch.id], '张师傅');
+              showToast('合包成功', 'success');
+            }
+          }
+        });
+      }
+    });
   };
 
   const handleSplit = () => {
     console.log('[BatchDetail] 拆分操作');
-    showToast('拆分功能');
+    Taro.showActionSheet({
+      itemList: ['拆分为 2 个批次', '拆分为 3 个批次', '拆分为 4 个批次'],
+      success: (res) => {
+        const splitCount = res.tapIndex + 2;
+        Taro.showModal({
+          title: '确认拆分',
+          content: `确定将 ${record.batchNo} 拆分为 ${splitCount} 个批次？`,
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              splitBatch(record.id, splitCount, '张师傅');
+              showToast('拆分成功', 'success');
+            }
+          }
+        });
+      }
+    });
   };
 
   const handleException = () => {
@@ -50,7 +103,15 @@ const BatchDetailPage: React.FC = () => {
 
   const handleUpdateStep = () => {
     console.log('[BatchDetail] 更新处理进度');
-    showToast('更新处理进度');
+    if (!nextStep) {
+      showToast('所有步骤已完成');
+      return;
+    }
+    const stepToUpdate = currentStepIndex >= 0 ? nextStep : record.steps[0];
+    if (stepToUpdate) {
+      updateBatchStep(record.id, stepToUpdate.id, '张师傅');
+      showToast(`已完成：${stepToUpdate.name}`, 'success');
+    }
   };
 
   return (

@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
-import { mockDeliveryList } from '@/data/delivery';
+import { useAppStore } from '@/store';
 import type { DeliveryRecord, DeliveryStatus } from '@/types';
 import { formatDate, showToast } from '@/utils';
 
@@ -24,19 +24,21 @@ const filterTabs: FilterTab[] = [
 
 const DeliveryPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterTab['key']>('all');
+  const deliveryList = useAppStore(state => state.deliveryList);
+  const receiveDelivery = useAppStore(state => state.receiveDelivery);
 
   const filteredList = useMemo(() => {
-    if (activeFilter === 'all') return mockDeliveryList;
-    return mockDeliveryList.filter(item => item.status === activeFilter);
-  }, [activeFilter]);
+    if (activeFilter === 'all') return deliveryList;
+    return deliveryList.filter(item => item.status === activeFilter);
+  }, [deliveryList, activeFilter]);
 
   const stats = useMemo(() => {
     return {
-      shipping: mockDeliveryList.filter(d => d.status === 'shipping').length,
-      pending: mockDeliveryList.filter(d => d.status === 'pending').length,
-      delivered: mockDeliveryList.filter(d => d.status === 'delivered').length
+      shipping: deliveryList.filter(d => d.status === 'shipping').length,
+      pending: deliveryList.filter(d => d.status === 'pending').length,
+      delivered: deliveryList.filter(d => d.status === 'delivered').length
     };
-  }, []);
+  }, [deliveryList]);
 
   const handleItemClick = (item: DeliveryRecord) => {
     console.log('[Delivery] 点击配送单:', item.deliveryNo);
@@ -57,7 +59,19 @@ const DeliveryPage: React.FC = () => {
   const handleSign = (item: DeliveryRecord, e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('[Delivery] 签收配送:', item.deliveryNo);
-    showToast('签收成功', 'success');
+    Taro.showModal({
+      title: '确认签收',
+      editable: true,
+      placeholderText: '请输入签收人姓名',
+      content: '王护士',
+      success: (res) => {
+        if (res.confirm) {
+          const receiver = res.content || '王护士';
+          receiveDelivery(item.id, receiver, item.totalQuantity);
+          showToast('签收成功', 'success');
+        }
+      }
+    });
   };
 
   const handleRecheck = (item: DeliveryRecord, e: React.MouseEvent) => {

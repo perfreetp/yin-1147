@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
-import { mockHandoverList } from '@/data/handover';
+import { useAppStore } from '@/store';
 import type { HandoverRecord, HandoverStatus } from '@/types';
 import { formatDate } from '@/utils';
 
@@ -24,19 +24,21 @@ const filterTabs: FilterTab[] = [
 
 const HandoverPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterTab['key']>('all');
+  const handoverList = useAppStore(state => state.handoverList);
 
   const filteredList = useMemo(() => {
-    if (activeFilter === 'all') return mockHandoverList;
-    return mockHandoverList.filter(item => item.status === activeFilter);
-  }, [activeFilter]);
+    if (activeFilter === 'all') return handoverList;
+    return handoverList.filter(item => item.status === activeFilter);
+  }, [handoverList, activeFilter]);
 
   const stats = useMemo(() => {
+    const todayStr = formatDate(new Date(), 'YYYY-MM-DD');
     return {
-      today: mockHandoverList.filter(h => h.createdAt.startsWith('2026-06-18')).length,
-      pending: mockHandoverList.filter(h => h.status === 'pending').length,
-      processing: mockHandoverList.filter(h => ['received', 'processing'].includes(h.status)).length
+      today: handoverList.filter(h => h.createdAt.startsWith(todayStr)).length,
+      pending: handoverList.filter(h => h.status === 'pending').length,
+      processing: handoverList.filter(h => ['received', 'processing'].includes(h.status)).length
     };
-  }, []);
+  }, [handoverList]);
 
   const handleItemClick = (item: HandoverRecord) => {
     console.log('[Handover] 点击交接记录:', item.handoverNo);

@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
-import { mockBatchList } from '@/data/batch';
+import { useAppStore } from '@/store';
 import type { BatchRecord, BatchStatus } from '@/types';
 import { formatDate } from '@/utils';
 
@@ -25,19 +25,20 @@ const filterTabs: FilterTab[] = [
 
 const BatchPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterTab['key']>('all');
+  const batchList = useAppStore(state => state.batchList);
 
   const filteredList = useMemo(() => {
-    if (activeFilter === 'all') return mockBatchList;
-    return mockBatchList.filter(item => item.status === activeFilter);
-  }, [activeFilter]);
+    if (activeFilter === 'all') return batchList;
+    return batchList.filter(item => item.status === activeFilter);
+  }, [batchList, activeFilter]);
 
   const stats = useMemo(() => {
     return {
-      processing: mockBatchList.filter(b => ['cleaning', 'disinfecting', 'sterilizing', 'packaging'].includes(b.status)).length,
-      pending: mockBatchList.filter(b => b.status === 'pending').length,
-      completed: mockBatchList.filter(b => b.status === 'completed').length
+      processing: batchList.filter(b => ['cleaning', 'disinfecting', 'sterilizing', 'packaging'].includes(b.status)).length,
+      pending: batchList.filter(b => b.status === 'pending').length,
+      completed: batchList.filter(b => b.status === 'completed').length
     };
-  }, []);
+  }, [batchList]);
 
   const getProgress = (item: BatchRecord) => {
     const total = item.steps.length;

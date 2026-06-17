@@ -5,17 +5,19 @@ import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
 import InfoCard from '@/components/InfoCard';
 import StepIndicator from '@/components/StepIndicator';
-import { mockHandoverList } from '@/data/handover';
+import { useAppStore } from '@/store';
 import type { HandoverRecord } from '@/types';
 import { formatDate, showToast, copyToClipboard } from '@/utils';
 
 const HandoverDetailPage: React.FC = () => {
   const router = useRouter();
   const id = router.params.id;
+  const handoverList = useAppStore(state => state.handoverList);
+  const batchList = useAppStore(state => state.batchList);
 
   const record = useMemo<HandoverRecord | undefined>(() => {
-    return mockHandoverList.find(h => h.id === id) || mockHandoverList[0];
-  }, [id]);
+    return handoverList.find(h => h.id === id) || handoverList[0];
+  }, [handoverList, id]);
 
   if (!record) {
     return (
@@ -24,6 +26,10 @@ const HandoverDetailPage: React.FC = () => {
       </View>
     );
   }
+
+  const relatedBatch = useMemo(() => {
+    return batchList.find(b => b.sourceHandoverIds.includes(record.id));
+  }, [batchList, record]);
 
   const timelineSteps = useMemo(() => {
     const steps: Array<{ id: string; action: string; operator: string; time: string; location: string }> = [];
@@ -84,7 +90,11 @@ const HandoverDetailPage: React.FC = () => {
 
   const handleViewBatch = () => {
     console.log('[HandoverDetail] 查看关联批次');
-    Taro.navigateTo({ url: '/pages/batch-detail/index?id=b1' });
+    if (relatedBatch) {
+      Taro.navigateTo({ url: `/pages/batch-detail/index?id=${relatedBatch.id}` });
+    } else {
+      showToast('暂无关联批次');
+    }
   };
 
   return (

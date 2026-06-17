@@ -6,17 +6,19 @@ import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
 import StepIndicator from '@/components/StepIndicator';
 import InfoCard from '@/components/InfoCard';
-import { mockTraceList } from '@/data/trace';
+import { useAppStore } from '@/store';
 import type { TraceRecord } from '@/types';
 import { formatDate, getDaysUntilExpire, showToast, copyToClipboard } from '@/utils';
 
 const TraceDetailPage: React.FC = () => {
   const router = useRouter();
   const id = router.params.id;
+  const traceList = useAppStore(state => state.traceList);
+  const usePackage = useAppStore(state => state.usePackage);
 
   const record = useMemo<TraceRecord | undefined>(() => {
-    return mockTraceList.find(t => t.id === id) || mockTraceList[0];
-  }, [id]);
+    return traceList.find(t => t.id === id) || traceList[0];
+  }, [traceList, id]);
 
   if (!record) {
     return (
@@ -57,13 +59,58 @@ const TraceDetailPage: React.FC = () => {
 
   const handlePatientUse = () => {
     console.log('[TraceDetail] 患者使用回填:', record.packageNo);
-    showToast('患者使用回填功能');
+    Taro.showModal({
+      title: '患者使用回填',
+      editable: true,
+      placeholderText: '请输入患者姓名',
+      content: '',
+      success: (res) => {
+        if (res.confirm && res.content) {
+          const patientName = res.content;
+          Taro.showModal({
+            title: '填写医生姓名',
+            editable: true,
+            placeholderText: '请输入医生姓名',
+            content: '张医生',
+            success: (doctorRes) => {
+              if (doctorRes.confirm) {
+                const doctorName = doctorRes.content || '张医生';
+                usePackage(record.id, patientName, doctorName);
+                showToast('使用记录已保存', 'success');
+              }
+            }
+          });
+        }
+      }
+    });
   };
 
   const handleExportTrace = () => {
     console.log('[TraceDetail] 导出追溯凭证:', record.packageNo);
-    showToast('凭证导出中...', 'loading');
-    setTimeout(() => showToast('导出成功', 'success'), 1500);
+    const content = `
+无菌包追溯凭证
+====================================
+包裹编号：${record.packageNo}
+包裹名称：${record.packageName}
+所属诊所：${record.clinicName}
+灭菌日期：${formatDate(record.sterilizeDate)}
+有效期至：${formatDate(record.expireDate)}
+当前状态：${record.status === 'valid' ? '有效期内' : record.status === 'used' ? '已使用' : '已过期'}
+${record.status === 'used' ? `使用医生：${record.usedBy || '-'}
+使用时间：${record.usedAt ? formatDate(record.usedAt) : '-'}
+患者姓名：${record.patientName || '-'}` : ''}
+====================================
+追溯记录（共 ${record.traceChain.length} 条）：
+${record.traceChain.map((step, idx) => `${idx + 1}. ${step.action} - ${step.operator} - ${formatDate(step.time)} - ${step.location}`).join('\n')}
+====================================
+此凭证由系统自动生成，具有可追溯性。
+    `.trim();
+    copyToClipboard(content);
+    Taro.showModal({
+      title: '凭证已生成',
+      content: '追溯凭证已复制到剪贴板，可粘贴保存。',
+      showCancel: false
+    });
   };
 
   const getStatusBadge = () => {
