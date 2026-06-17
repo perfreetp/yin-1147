@@ -8,13 +8,16 @@ import type {
   TraceRecord,
   ReconciliationRecord,
   InstrumentItem,
-  BatchStep
+  BatchStep,
+  ExceptionRecord,
+  RecheckRecord,
+  DashboardStats
 } from '@/types';
 import { mockHandoverList } from '@/data/handover';
 import { mockBatchList } from '@/data/batch';
 import { mockDeliveryList } from '@/data/delivery';
 import { mockTraceList, mockReconciliationList } from '@/data/trace';
-import { generateId, formatDate } from '@/utils';
+import { generateId, formatDate, getDaysUntilExpire } from '@/utils';
 
 const taroStorage = {
   getItem: (name: string) => {
@@ -46,6 +49,8 @@ interface AppState {
   deliveryList: DeliveryRecord[];
   traceList: TraceRecord[];
   reconciliationList: ReconciliationRecord[];
+  exceptionList: ExceptionRecord[];
+  recheckList: RecheckRecord[];
 
   addHandover: (data: {
     clinicName: string;
@@ -66,9 +71,32 @@ interface AppState {
 
   receiveDelivery: (deliveryId: string, receiverName: string, checkedQuantity?: number) => void;
 
+  saveRecheck: (deliveryId: string, checkedQuantity: number, operator: string, remark?: string) => RecheckRecord;
+
+  getRecheckByDelivery: (deliveryId: string) => RecheckRecord | undefined;
+
   usePackage: (packageId: string, patientName: string, doctorName: string, useTime?: string) => void;
 
   exportReconciliation: (reconciliationId: string) => string;
+
+  addException: (data: {
+    sourceType: 'handover' | 'batch' | 'delivery';
+    sourceId: string;
+    sourceNo: string;
+    reason: string;
+    photos: string[];
+    operator?: string;
+  }) => ExceptionRecord;
+
+  getExceptionsBySource: (sourceId: string) => ExceptionRecord[];
+
+  markHandoverException: (id: string, reason: string, photos: string[], operator?: string) => void;
+
+  markBatchException: (id: string, reason: string, photos: string[], operator?: string) => void;
+
+  markDeliveryException: (id: string, reason: string, photos: string[], operator?: string) => void;
+
+  getDashboardStats: () => DashboardStats[];
 
   resetAllData: () => void;
 }
@@ -81,6 +109,8 @@ export const useAppStore = create<AppState>()(
       deliveryList: mockDeliveryList,
       traceList: mockTraceList,
       reconciliationList: mockReconciliationList,
+      exceptionList: [],
+      recheckList: [],
 
       addHandover: (data) => {
         const now = new Date();
@@ -469,13 +499,198 @@ export const useAppStore = create<AppState>()(
         return content;
       },
 
+      saveRecheck: (deliveryId, checkedQuantity, operator, remark) => {
+        const now = formatDate(new Date());
+        const state = get();
+        const delivery = state.deliveryList.find(d => d.id === deliveryId);
+
+        const recheck: RecheckRecord = {
+          id: generateId(),
+          deliveryId,
+          deliveryNo: delivery?.deliveryNo || '',
+          checkedQuantity,
+          expectedQuantity: delivery?.totalQuantity || 0,
+          difference: checkedQuantity - (delivery?.totalQuantity || 0),
+          operator,
+          createdAt: now,
+          remark
+        };
+
+        set((st) => ({
+          recheckList: [recheck, ...st.recheckList.filter(r => r.deliveryId !== deliveryId)],
+          deliveryList: st.deliveryList.map(d => {
+            if (d.id === deliveryId) {
+              return {
+                ...d,
+                checkedQuantity,
+                recheckId: recheck.id
+              };
+            }
+            return d;
+          })
+        }));
+
+        return recheck;
+      },
+
+      getRecheckByDelivery: (deliveryId) => {
+        return get().recheckList.find(r => r.deliveryId === deliveryId);
+      },
+
+      addException: (data) => {
+        const now = formatDate(new Date());
+        const record: ExceptionRecord = {
+          id: generateId(),
+          sourceType: data.sourceType,
+          sourceId: data.sourceId,
+          sourceNo: data.sourceNo,
+          reason: data.reason,
+          photos: data.photos,
+          operator: data.operator || '张师傅',
+          createdAt: now
+        };
+
+        set((state) => ({
+          exceptionList: [record, ...state.exceptionList]
+        }));
+
+        return record;
+      },
+
+      getExceptionsBySource: (sourceId) => {
+        return get().exceptionList.filter(e => e.sourceId === sourceId);
+      },
+
+      markHandoverException: (id, reason, photos, operator = '张师傅') => {
+        const handover = get().handoverList.find(h => h.id === id);
+        if (!handover) return;
+
+        get().addException({
+          sourceType: 'handover',
+          sourceId: id,
+          sourceNo: handover.handoverNo,
+          reason,
+          photos,
+          operator
+        });
+
+        set((state) => ({
+          handoverList: state.handoverList.map(h => {
+            if (h.id === id) {
+              return {
+                ...h,
+                status: 'exception' as const,
+                statusText: '异常退回',
+                remark: reason
+              };
+            }
+            return h;
+          })
+        }));
+      },
+
+      markBatchException: (id, reason, photos, operator = '张师傅') => {
+        const batch = get().batchList.find(b => b.id === id);
+        if (!batch) return;
+
+        get().addException({
+          sourceType: 'batch',
+          sourceId: id,
+          sourceNo: batch.batchNo,
+          reason,
+          photos,
+          operator
+        });
+
+        set((state) => ({
+          batchList: state.batchList.map(b => {
+            if (b.id === id) {
+              return {
+                ...b,
+                status: 'exception' as const,
+                statusText: '异常退回',
+                exceptionRemark: reason
+              };
+            }
+            return b;
+          })
+        }));
+      },
+
+      markDeliveryException: (id, reason, photos, operator = '张师傅') => {
+        const delivery = get().deliveryList.find(d => d.id === id);
+        if (!delivery) return;
+
+        get().addException({
+          sourceType: 'delivery',
+          sourceId: id,
+          sourceNo: delivery.deliveryNo,
+          reason,
+          photos,
+          operator
+        });
+
+        set((state) => ({
+          deliveryList: state.deliveryList.map(d => {
+            if (d.id === id) {
+              return {
+                ...d,
+                status: 'exception' as const,
+                statusText: '配送异常',
+                routeInfo: reason
+              };
+            }
+            return d;
+          })
+        }));
+      },
+
+      getDashboardStats: () => {
+        const state = get();
+        const clinicMap = new Map<string, string>();
+
+        state.handoverList.forEach(h => clinicMap.set(h.clinicId, h.clinicName));
+        state.deliveryList.forEach(d => clinicMap.set(d.clinicId, d.clinicName));
+        state.traceList.forEach(t => {
+          const handover = state.handoverList.find(h => h.handoverNo === t.handoverNo);
+          if (handover) clinicMap.set(handover.clinicId, handover.clinicName);
+        });
+
+        const stats: DashboardStats[] = [];
+
+        clinicMap.forEach((clinicName, clinicId) => {
+          const handovers = state.handoverList.filter(h => h.clinicId === clinicId);
+          const deliveries = state.deliveryList.filter(d => d.clinicId === clinicId);
+          const handoverNos = handovers.map(h => h.handoverNo);
+          const traces = state.traceList.filter(t => handoverNos.includes(t.handoverNo));
+
+          stats.push({
+            clinicId,
+            clinicName,
+            pending: handovers.filter(h => h.status === 'pending').length,
+            processing: handovers.filter(h => ['received', 'processing'].includes(h.status)).length,
+            pendingSign: deliveries.filter(d => d.status === 'delivered').length,
+            expiringSoon: traces.filter(t => {
+              if (t.status !== 'valid') return false;
+              const days = getDaysUntilExpire(t.expireDate);
+              return days > 0 && days <= 7;
+            }).length,
+            used: traces.filter(t => t.status === 'used').length
+          });
+        });
+
+        return stats;
+      },
+
       resetAllData: () => {
         set({
           handoverList: mockHandoverList,
           batchList: mockBatchList,
           deliveryList: mockDeliveryList,
           traceList: mockTraceList,
-          reconciliationList: mockReconciliationList
+          reconciliationList: mockReconciliationList,
+          exceptionList: [],
+          recheckList: []
         });
       }
     }),

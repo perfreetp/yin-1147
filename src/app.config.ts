@@ -10,7 +10,8 @@ export default defineAppConfig({
     'pages/batch-detail/index',
     'pages/delivery-detail/index',
     'pages/scan-receive/index',
-    'pages/trace-detail/index'
+    'pages/trace-detail/index',
+    'pages/dashboard/index'
   ],
   window: {
     backgroundTextStyle: 'light',

@@ -42,8 +42,42 @@ const TracePage: React.FC = () => {
           success: (modalRes) => {
             if (modalRes.confirm && modalRes.content) {
               const patientName = modalRes.content;
-              usePackage(target.id, patientName, '张医生');
-              showToast('使用记录已保存', 'success');
+              Taro.showModal({
+                title: '填写使用医生',
+                editable: true,
+                placeholderText: '请输入医生姓名',
+                content: '',
+                success: (doctorRes) => {
+                  if (doctorRes.confirm) {
+                    const doctorName = doctorRes.content || '张医生';
+                    Taro.showModal({
+                      title: '选择使用时间',
+                      content: '是否使用当前时间？',
+                      confirmText: '当前时间',
+                      cancelText: '手动选择',
+                      success: (timeRes) => {
+                        if (timeRes.confirm) {
+                          usePackage(target.id, patientName, doctorName, formatDate(new Date()));
+                          showToast('使用记录已保存', 'success');
+                        } else {
+                          Taro.showModal({
+                            title: '输入使用时间',
+                            editable: true,
+                            placeholderText: '格式：2026-06-18 10:30',
+                            content: formatDate(new Date(), 'YYYY-MM-DD HH:mm'),
+                            success: (manualTimeRes) => {
+                              if (manualTimeRes.confirm && manualTimeRes.content) {
+                                usePackage(target.id, patientName, doctorName, manualTimeRes.content);
+                                showToast('使用记录已保存', 'success');
+                              }
+                            }
+                          });
+                        }
+                      }
+                    });
+                  }
+                }
+              });
             }
           }
         });
@@ -174,6 +208,12 @@ const TracePage: React.FC = () => {
                           <View className={styles.patientInfo}>
                             <Text className={styles.patientLabel}>患者：</Text>
                             <Text className={styles.patientDetail}>{item.patientName}</Text>
+                            {item.usedBy ? (
+                              <Text className={styles.patientDetail}> · {item.usedBy}</Text>
+                            ) : null}
+                            {item.usedAt ? (
+                              <Text className={styles.patientDetail}> · {formatDate(item.usedAt, 'MM-DD HH:mm')}</Text>
+                            ) : null}
                           </View>
                         ) : null}
                       </View>

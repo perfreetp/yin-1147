@@ -5,6 +5,7 @@ import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
 import InfoCard from '@/components/InfoCard';
 import StepIndicator from '@/components/StepIndicator';
+import ExceptionSection from '@/components/ExceptionSection';
 import { useAppStore } from '@/store';
 import type { HandoverRecord } from '@/types';
 import { formatDate, showToast, copyToClipboard } from '@/utils';
@@ -14,6 +15,7 @@ const HandoverDetailPage: React.FC = () => {
   const id = router.params.id;
   const handoverList = useAppStore(state => state.handoverList);
   const batchList = useAppStore(state => state.batchList);
+  const markHandoverException = useAppStore(state => state.markHandoverException);
 
   const record = useMemo<HandoverRecord | undefined>(() => {
     return handoverList.find(h => h.id === id) || handoverList[0];
@@ -158,6 +160,13 @@ const HandoverDetailPage: React.FC = () => {
       <View className={styles.timelineCard}>
         <StepIndicator steps={timelineSteps} />
       </View>
+
+      <ExceptionSection
+        sourceType="handover"
+        sourceId={record.id}
+        sourceNo={record.handoverNo}
+        onRegister={(reason, photos) => markHandoverException(record.id, reason, photos)}
+      />
 
       <View className={styles.bottomBar}>
         <View className={`${styles.btn} ${styles.btnSecondary}`} onClick={handleContact}>

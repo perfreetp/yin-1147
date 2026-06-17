@@ -1,0 +1,231 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 120rpx;
+}
+
+.header {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  padding: $page-spacing $page-padding $spacing-xl;
+  color: $color-text-white;
+}
+
+.headerTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  margin-bottom: $spacing-xs;
+}
+
+.headerSubtitle {
+  font-size: $font-size-sm;
+  opacity: 0.85;
+}
+
+.contentSection {
+  padding: $page-spacing $page-padding;
+  margin-top: -$spacing-lg;
+}
+
+.overviewCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.overviewTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.overviewTotal {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-normal;
+}
+
+.overviewStats {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.overviewStat {
+  flex: 1;
+  text-align: center;
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+}
+
+.overviewStatValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  display: block;
+}
+
+.overviewStatLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.sectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin: $spacing-lg 0 $spacing-md;
+}
+
+.clinicCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.clinicHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.clinicName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.clinicIcon {
+  font-size: $font-size-md;
+}
+
+.clinicId {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.statCell {
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-sm;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+.statCellHighlight {
+  background: rgba(255, 86, 48, 0.08);
+}
+
+.statValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  display: block;
+  line-height: 1.2;
+}
+
+.statValuePending {
+  color: $color-warning;
+}
+
+.statValueProcessing {
+  color: $color-primary;
+}
+
+.statValueSign {
+  color: $color-info;
+}
+
+.statValueExpire {
+  color: $color-error;
+}
+
+.statValueUsed {
+  color: $color-text-tertiary;
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
+.emptyState {
+  padding: $spacing-xl $spacing-lg;
+  text-align: center;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-md;
+  padding: $spacing-sm 0;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.legendDot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: $radius-round;
+}
+
+.legendDotPending {
+  background: $color-warning;
+}
+
+.legendDotProcessing {
+  background: $color-primary;
+}
+
+.legendDotSign {
+  background: $color-info;
+}
+
+.legendDotExpire {
+  background: $color-error;
+}
+
+.legendDotUsed {
+  background: $color-text-tertiary;
+}

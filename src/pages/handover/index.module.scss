@@ -12,6 +12,32 @@
   color: $color-text-white;
 }
 
+.headerTopRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.dashboardEntry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: $radius-md;
+  backdrop-filter: blur(8px);
+}
+
+.dashboardIcon {
+  font-size: $font-size-xl;
+}
+
+.dashboardText {
+  font-size: $font-size-xs;
+  color: $color-text-white;
+}
+
 .headerTitle {
   font-size: $font-size-xxl;
   font-weight: $font-weight-semibold;
@@ -124,6 +150,25 @@
 .itemTime {
   font-size: $font-size-sm;
   color: $color-text-tertiary;
+}
+
+.receiverRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+  padding-top: $spacing-sm;
+  border-top: 1rpx solid $color-divider;
+}
+
+.receiverIcon {
+  font-size: $font-size-sm;
+}
+
+.receiverText {
+  font-size: $font-size-sm;
+  color: $color-success;
+  font-weight: $font-weight-medium;
 }
 
 .fabButton {

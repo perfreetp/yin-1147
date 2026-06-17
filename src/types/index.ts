@@ -10,6 +10,29 @@ export interface InstrumentItem {
   remark?: string;
 }
 
+export interface ExceptionRecord {
+  id: string;
+  sourceType: 'handover' | 'batch' | 'delivery';
+  sourceId: string;
+  sourceNo: string;
+  reason: string;
+  photos: string[];
+  operator: string;
+  createdAt: string;
+}
+
+export interface RecheckRecord {
+  id: string;
+  deliveryId: string;
+  deliveryNo: string;
+  checkedQuantity: number;
+  expectedQuantity: number;
+  difference: number;
+  operator: string;
+  createdAt: string;
+  remark?: string;
+}
+
 export interface HandoverRecord {
   id: string;
   handoverNo: string;
@@ -81,6 +104,7 @@ export interface DeliveryRecord {
   receiverName?: string;
   signatureImage?: string;
   checkedQuantity?: number;
+  recheckId?: string;
 }
 
 export interface TraceRecord {
@@ -118,4 +142,14 @@ export interface ReconciliationRecord {
   totalAmount: number;
   status: 'pending' | 'confirmed' | 'paid';
   createdAt: string;
+}
+
+export interface DashboardStats {
+  clinicId: string;
+  clinicName: string;
+  pending: number;
+  processing: number;
+  pendingSign: number;
+  expiringSoon: number;
+  used: number;
 }

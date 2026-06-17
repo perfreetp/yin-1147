@@ -68,15 +68,38 @@ const TraceDetailPage: React.FC = () => {
         if (res.confirm && res.content) {
           const patientName = res.content;
           Taro.showModal({
-            title: '填写医生姓名',
+            title: '填写使用医生',
             editable: true,
             placeholderText: '请输入医生姓名',
-            content: '张医生',
+            content: '',
             success: (doctorRes) => {
               if (doctorRes.confirm) {
                 const doctorName = doctorRes.content || '张医生';
-                usePackage(record.id, patientName, doctorName);
-                showToast('使用记录已保存', 'success');
+                Taro.showModal({
+                  title: '选择使用时间',
+                  content: '是否使用当前时间？',
+                  confirmText: '当前时间',
+                  cancelText: '手动选择',
+                  success: (timeRes) => {
+                    if (timeRes.confirm) {
+                      usePackage(record.id, patientName, doctorName, formatDate(new Date()));
+                      showToast('使用记录已保存', 'success');
+                    } else {
+                      Taro.showModal({
+                        title: '输入使用时间',
+                        editable: true,
+                        placeholderText: '格式：2026-06-18 10:30',
+                        content: formatDate(new Date(), 'YYYY-MM-DD HH:mm'),
+                        success: (manualTimeRes) => {
+                          if (manualTimeRes.confirm && manualTimeRes.content) {
+                            usePackage(record.id, patientName, doctorName, manualTimeRes.content);
+                            showToast('使用记录已保存', 'success');
+                          }
+                        }
+                      });
+                    }
+                  }
+                });
               }
             }
           });

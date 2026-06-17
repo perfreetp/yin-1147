@@ -54,11 +54,26 @@ const HandoverPage: React.FC = () => {
     });
   };
 
+  const handleViewDashboard = () => {
+    console.log('[Handover] 查看流转看板');
+    Taro.navigateTo({
+      url: '/pages/dashboard/index'
+    });
+  };
+
   return (
     <View className={styles.container}>
       <View className={styles.header}>
-        <Text className={styles.headerTitle}>门诊交接</Text>
-        <Text className={styles.headerSubtitle}>实时追踪消毒器械流转状态</Text>
+        <View className={styles.headerTopRow}>
+          <View>
+            <Text className={styles.headerTitle}>门诊交接</Text>
+            <Text className={styles.headerSubtitle}>实时追踪消毒器械流转状态</Text>
+          </View>
+          <View className={styles.dashboardEntry} onClick={handleViewDashboard}>
+            <Text className={styles.dashboardIcon}>📊</Text>
+            <Text className={styles.dashboardText}>看板</Text>
+          </View>
+        </View>
         <View className={styles.statsRow}>
           <View className={styles.statCard}>
             <Text className={styles.statNumber}>{stats.today}</Text>
@@ -109,6 +124,14 @@ const HandoverPage: React.FC = () => {
                   <Text className={styles.itemQuantity}>共 {item.totalQuantity} 件器械</Text>
                   <Text className={styles.itemTime}>{formatDate(item.createdAt, 'MM-DD HH:mm')}</Text>
                 </View>
+                {item.receiverName && item.handoverTime ? (
+                  <View className={styles.receiverRow}>
+                    <Text className={styles.receiverIcon}>✅</Text>
+                    <Text className={styles.receiverText}>
+                      {item.receiverName} · {formatDate(item.handoverTime, 'MM-DD HH:mm')}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ))
           )}

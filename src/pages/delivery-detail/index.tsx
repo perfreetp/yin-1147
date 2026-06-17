@@ -5,9 +5,10 @@ import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
 import InfoCard from '@/components/InfoCard';
 import StepIndicator from '@/components/StepIndicator';
+import ExceptionSection from '@/components/ExceptionSection';
 import { useAppStore } from '@/store';
 import type { DeliveryRecord } from '@/types';
-import { formatDate, showToast, getDaysUntilExpire } from '@/utils';
+import { formatDate, showToast, getDaysUntilExpire } from '@/utils;
 
 const DeliveryDetailPage: React.FC = () => {
   const router = useRouter();
@@ -15,10 +16,18 @@ const DeliveryDetailPage: React.FC = () => {
   const deliveryList = useAppStore(state => state.deliveryList);
   const receiveDelivery = useAppStore(state => state.receiveDelivery);
   const markDeliveryDelivered = useAppStore(state => state.markDeliveryDelivered);
+  const saveRecheck = useAppStore(state => state.saveRecheck);
+  const getRecheckByDelivery = useAppStore(state => state.getRecheckByDelivery);
+  const markDeliveryException = useAppStore(state => state.markDeliveryException);
 
   const record = useMemo<DeliveryRecord | undefined>(() => {
     return deliveryList.find(d => d.id === id) || deliveryList[0];
   }, [deliveryList, id]);
+
+  const existingRecheck = useMemo(() => {
+    if (!record) return undefined;
+    return getRecheckByDelivery(record.id);
+  }, [record, getRecheckByDelivery]);
 
   if (!record) {
     return (
@@ -77,6 +86,29 @@ const DeliveryDetailPage: React.FC = () => {
 
   const handleRecheck = () => {
     console.log('[DeliveryDetail] 收货复点');
+    if (existingRecheck) {
+      const diffText = existingRecheck.difference === 0
+        ? '数量一致'
+        : existingRecheck.difference > 0
+          ? `多出 ${existingRecheck.difference} 件`
+          : `缺少 ${Math.abs(existingRecheck.difference)} 件`;
+      Taro.showModal({
+        title: '已有复点记录',
+        content: `复点数量：${existingRecheck.checkedQuantity} 件\n应收数量：${existingRecheck.expectedQuantity} 件\n${diffText}\n复点人：${existingRecheck.operator}\n复点时间：${formatDate(existingRecheck.createdAt)}${existingRecheck.remark ? `\n备注：${existingRecheck.remark}` : ''}`,
+        confirmText: '重新复点',
+        cancelText: '关闭',
+        success: (res) => {
+          if (res.confirm) {
+            doRecheck();
+          }
+        }
+      });
+    } else {
+      doRecheck();
+    }
+  };
+
+  const doRecheck = () => {
     Taro.showModal({
       title: '收货复点',
       editable: true,
@@ -85,12 +117,16 @@ const DeliveryDetailPage: React.FC = () => {
       success: (res) => {
         if (res.confirm && res.content) {
           const checkedQty = parseInt(res.content, 10) || record.totalQuantity;
+          const diff = checkedQty - record.totalQuantity;
+          const diffText = diff === 0 ? '数量一致' : diff > 0 ? `数量多出 ${diff} 件` : `数量缺少 ${Math.abs(diff)} 件`;
           Taro.showModal({
             title: '确认复点结果',
-            content: `复点数量：${checkedQty} 件\n${checkedQty === record.totalQuantity ? '数量一致' : checkedQty > record.totalQuantity ? '数量多出' : `数量缺少 ${record.totalQuantity - checkedQty} 件`}`,
+            content: `复点数量：${checkedQty} 件\n${diffText}`,
+            confirmText: '确认保存',
             success: (modalRes) => {
               if (modalRes.confirm) {
-                showToast('复点完成', 'success');
+                saveRecheck(record.id, checkedQty, record.receiverName || '王护士', diffText);
+                showToast('复点记录已保存', 'success');
               }
             }
           });
@@ -196,6 +232,26 @@ const DeliveryDetailPage: React.FC = () => {
         <StepIndicator steps={timelineSteps} />
       </View>
 
+      {existingRecheck ? (
+        <>
+          <Text className={styles.sectionTitle}>
+            <Text className={styles.sectionIcon}>🔍</Text>
+            复点记录
+          </Text>
+          <InfoCard
+            title=""
+            items={[
+              { label: '复点数量', value: `${existingRecheck.checkedQuantity} 件` },
+              { label: '应收数量', value: `${existingRecheck.expectedQuantity} 件` },
+              { label: '差异', value: existingRecheck.difference === 0 ? '一致' : existingRecheck.difference > 0 ? `多${existingRecheck.difference}件` : `少${Math.abs(existingRecheck.difference)}件` },
+              { label: '复点人', value: existingRecheck.operator },
+              { label: '复点时间', value: formatDate(existingRecheck.createdAt) },
+              ...(existingRecheck.remark ? [{ label: '备注', value: existingRecheck.remark }] : [])
+            ]}
+          />
+        </>
+      ) : null}
+
       <InfoCard
         title="配送信息"
         items={[
@@ -204,8 +260,16 @@ const DeliveryDetailPage: React.FC = () => {
           ...(record.shippedAt ? [{ label: '发车时间', value: formatDate(record.shippedAt) }] : []),
           ...(record.deliveredAt ? [{ label: '送达时间', value: formatDate(record.deliveredAt) }] : []),
           ...(record.receivedAt ? [{ label: '签收时间', value: formatDate(record.receivedAt) }] : []),
-          ...(record.receiverName ? [{ label: '签收人', value: record.receiverName }] : [])
+          ...(record.receiverName ? [{ label: '签收人', value: record.receiverName }] : []),
+          ...(record.checkedQuantity ? [{ label: '复点数量', value: `${record.checkedQuantity} 件` }] : [])
         ]}
+      />
+
+      <ExceptionSection
+        sourceType="delivery"
+        sourceId={record.id}
+        sourceNo={record.deliveryNo}
+        onRegister={(reason, photos) => markDeliveryException(record.id, reason, photos)}
       />
 
       <View className={styles.bottomBar}>

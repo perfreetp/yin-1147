@@ -5,6 +5,7 @@ import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
 import StepIndicator from '@/components/StepIndicator';
 import InfoCard from '@/components/InfoCard';
+import ExceptionSection from '@/components/ExceptionSection';
 import { useAppStore } from '@/store';
 import type { BatchRecord } from '@/types';
 import { formatDate, showToast } from '@/utils';
@@ -16,6 +17,7 @@ const BatchDetailPage: React.FC = () => {
   const updateBatchStep = useAppStore(state => state.updateBatchStep);
   const splitBatch = useAppStore(state => state.splitBatch);
   const mergeBatches = useAppStore(state => state.mergeBatches);
+  const markBatchException = useAppStore(state => state.markBatchException);
 
   const record = useMemo<BatchRecord | undefined>(() => {
     return batchList.find(b => b.id === id) || batchList[0];
@@ -194,6 +196,13 @@ const BatchDetailPage: React.FC = () => {
           ...(record.completedAt ? [{ label: '完成时间', value: formatDate(record.completedAt) }] : []),
           ...(record.operator ? [{ label: '负责人', value: record.operator }] : [])
         ]}
+      />
+
+      <ExceptionSection
+        sourceType="batch"
+        sourceId={record.id}
+        sourceNo={record.batchNo}
+        onRegister={(reason, photos) => markBatchException(record.id, reason, photos)}
       />
 
       <View className={styles.bottomBar}>

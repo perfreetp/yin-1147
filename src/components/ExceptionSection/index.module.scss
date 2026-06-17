@@ -1,0 +1,87 @@
+@use '@/styles/variables.scss' as *;
+
+.exceptionSection {
+  margin-top: $spacing-md;
+}
+
+.exceptionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-md;
+  background: rgba(255, 86, 48, 0.1);
+  border-radius: $radius-round;
+  margin-bottom: $spacing-sm;
+}
+
+.exceptionBadgeIcon {
+  font-size: $font-size-sm;
+}
+
+.exceptionBadgeText {
+  font-size: $font-size-xs;
+  color: $color-error;
+  font-weight: $font-weight-medium;
+}
+
+.exceptionList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.exceptionItem {
+  background: rgba(255, 86, 48, 0.05);
+  border-left: 6rpx solid $color-error;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+}
+
+.exceptionReason {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xs;
+  line-height: 1.5;
+}
+
+.exceptionMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.exceptionPhotos {
+  display: flex;
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.exceptionPhoto {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-xl;
+}
+
+.exceptionBtn {
+  width: 100%;
+  padding: $spacing-md;
+  background: rgba(255, 86, 48, 0.08);
+  border: 1rpx solid rgba(255, 86, 48, 0.3);
+  border-radius: $radius-md;
+  text-align: center;
+  margin-top: $spacing-sm;
+}
+
+.exceptionBtnText {
+  font-size: $font-size-sm;
+  color: $color-error;
+  font-weight: $font-weight-medium;
+}
