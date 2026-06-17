@@ -70,6 +70,13 @@
   font-size: $font-size-xl;
 }
 
+.exceptionPhotoImg {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-sm;
+  background: $color-bg-hover;
+}
+
 .exceptionBtn {
   width: 100%;
   padding: $spacing-md;

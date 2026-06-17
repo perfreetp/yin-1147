@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, ScrollView, useDidShow } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -24,21 +24,52 @@ const filterTabs: FilterTab[] = [
 
 const HandoverPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterTab['key']>('all');
+  const [clinicFilter, setClinicFilter] = useState<string | null>(null);
   const handoverList = useAppStore(state => state.handoverList);
 
+  useDidShow(() => {
+    const filter = Taro.getStorageSync('dashboard_filter');
+    if (filter && typeof filter === 'object') {
+      if (filter.type === 'pending') {
+        setActiveFilter('pending');
+      }
+      if (filter.clinicId) {
+        setClinicFilter(filter.clinicId);
+      }
+      Taro.removeStorageSync('dashboard_filter');
+    }
+  });
+
   const filteredList = useMemo(() => {
-    if (activeFilter === 'all') return handoverList;
-    return handoverList.filter(item => item.status === activeFilter);
-  }, [handoverList, activeFilter]);
+    let list = handoverList;
+    if (activeFilter !== 'all') {
+      list = list.filter(item => item.status === activeFilter);
+    }
+    if (clinicFilter) {
+      list = list.filter(item => item.clinicId === clinicFilter);
+    }
+    return list;
+  }, [handoverList, activeFilter, clinicFilter]);
 
   const stats = useMemo(() => {
     const todayStr = formatDate(new Date(), 'YYYY-MM-DD');
+    const baseList = clinicFilter ? handoverList.filter(h => h.clinicId === clinicFilter) : handoverList;
     return {
-      today: handoverList.filter(h => h.createdAt.startsWith(todayStr)).length,
-      pending: handoverList.filter(h => h.status === 'pending').length,
-      processing: handoverList.filter(h => ['received', 'processing'].includes(h.status)).length
+      today: baseList.filter(h => h.createdAt.startsWith(todayStr)).length,
+      pending: baseList.filter(h => h.status === 'pending').length,
+      processing: baseList.filter(h => ['received', 'processing'].includes(h.status)).length
     };
-  }, [handoverList]);
+  }, [handoverList, clinicFilter]);
+
+  const activeClinicName = useMemo(() => {
+    if (!clinicFilter) return null;
+    const item = handoverList.find(h => h.clinicId === clinicFilter);
+    return item?.clinicName || null;
+  }, [handoverList, clinicFilter]);
+
+  const clearClinicFilter = () => {
+    setClinicFilter(null);
+  };
 
   const handleItemClick = (item: HandoverRecord) => {
     console.log('[Handover] 点击交接记录:', item.handoverNo);
@@ -91,6 +122,11 @@ const HandoverPage: React.FC = () => {
       </View>
 
       <ScrollView scrollY enhanced showScrollbar={false}>
+        {activeClinicName ? (
+          <View className={styles.clinicFilterBar} onClick={clearClinicFilter}>
+            <Text className={styles.clinicFilterText}>🏥 {activeClinicName}（点击清除筛选）</Text>
+          </View>
+        ) : null}
         <View className={styles.filterTabs}>
           {filterTabs.map(tab => (
             <View

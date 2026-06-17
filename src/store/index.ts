@@ -516,6 +516,13 @@ export const useAppStore = create<AppState>()(
           remark
         };
 
+        const diff = recheck.difference;
+        const diffText = diff === 0
+          ? '数量一致'
+          : diff > 0
+            ? `多出 ${diff} 件`
+            : `缺少 ${Math.abs(diff)} 件`;
+
         set((st) => ({
           recheckList: [recheck, ...st.recheckList.filter(r => r.deliveryId !== deliveryId)],
           deliveryList: st.deliveryList.map(d => {
@@ -527,6 +534,24 @@ export const useAppStore = create<AppState>()(
               };
             }
             return d;
+          }),
+          traceList: st.traceList.map(t => {
+            if (t.deliveryNo === delivery?.deliveryNo) {
+              return {
+                ...t,
+                traceChain: [
+                  ...t.traceChain,
+                  {
+                    id: generateId(),
+                    action: `收货复点（${diffText}）：${checkedQuantity}/${delivery?.totalQuantity || 0}件`,
+                    operator,
+                    time: now,
+                    location: delivery?.clinicName || t.clinicName
+                  }
+                ]
+              };
+            }
+            return t;
           })
         }));
 

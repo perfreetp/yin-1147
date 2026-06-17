@@ -20,16 +20,25 @@ const DashboardPage: React.FC = () => {
   }, [statsList]);
 
   const handleStatClick = (clinicId: string, type: 'pending' | 'processing' | 'pendingSign' | 'expiringSoon' | 'used') => {
-    const routeMap: Record<string, { url: string; filter?: string }> = {
-      pending: { url: '/pages/handover/index' },
-      processing: { url: '/pages/batch/index' },
-      pendingSign: { url: '/pages/delivery/index' },
-      expiringSoon: { url: '/pages/trace/index' },
-      used: { url: '/pages/trace/index' }
-    };
-    const route = routeMap[type];
-    if (route) {
-      Taro.switchTab({ url: route.url });
+    Taro.setStorageSync('dashboard_filter', {
+      clinicId,
+      type
+    });
+
+    switch (type) {
+      case 'pending':
+        Taro.switchTab({ url: '/pages/handover/index' });
+        break;
+      case 'processing':
+        Taro.switchTab({ url: '/pages/batch/index' });
+        break;
+      case 'pendingSign':
+        Taro.switchTab({ url: '/pages/delivery/index' });
+        break;
+      case 'expiringSoon':
+      case 'used':
+        Taro.switchTab({ url: '/pages/trace/index' });
+        break;
     }
   };
 

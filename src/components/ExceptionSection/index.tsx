@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from '@tarojs/components';
+import { View, Text, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import { useAppStore } from '@/store';
@@ -22,21 +22,52 @@ const ExceptionSection: React.FC<ExceptionSectionProps> = ({
   const exceptionList = useAppStore(state => state.exceptionList);
   const exceptions = exceptionList.filter(e => e.sourceId === sourceId);
 
-  const handleRegister = () => {
+  const handleChoosePhotos = async (): Promise<string[]> => {
+    return new Promise((resolve) => {
+      Taro.chooseImage({
+        count: 3,
+        sizeType: ['compressed'],
+        sourceType: ['album', 'camera'],
+        success: (res) => {
+          resolve(res.tempFilePaths);
+        },
+        fail: () => {
+          resolve([]);
+        }
+      });
+    });
+  };
+
+  const handleRegister = async () => {
     Taro.showActionSheet({
       itemList: ['器械损坏', '数量不符', '包装破损', '标签缺失', '其他问题'],
-      success: (res) => {
+      success: async (res) => {
         const reasons = ['器械损坏', '数量不符', '包装破损', '标签缺失', '其他问题'];
         const reason = reasons[res.tapIndex];
         Taro.showModal({
-          title: '异常登记',
+          title: '补充异常说明',
           editable: true,
           placeholderText: '补充说明（可选）',
           content: '',
-          success: (modalRes) => {
+          confirmText: '下一步',
+          cancelText: '取消',
+          success: async (modalRes) => {
+            if (!modalRes.confirm) return;
             const fullReason = modalRes.content ? `${reason}：${modalRes.content}` : reason;
-            onRegister(fullReason, ['📸']);
-            showToast('异常已登记', 'success');
+            Taro.showModal({
+              title: '上传凭证图片',
+              content: '是否上传凭证照片？',
+              confirmText: '去拍照',
+              cancelText: '直接提交',
+              success: async (photoRes) => {
+                let photos: string[] = [];
+                if (photoRes.confirm) {
+                  photos = await handleChoosePhotos();
+                }
+                onRegister(fullReason, photos);
+                showToast('异常已登记', 'success');
+              }
+            });
           }
         });
       }
@@ -62,9 +93,18 @@ const ExceptionSection: React.FC<ExceptionSectionProps> = ({
                 {exc.photos.length > 0 ? (
                   <View className={styles.exceptionPhotos}>
                     {exc.photos.map((photo, idx) => (
-                      <View key={idx} className={styles.exceptionPhoto}>
-                        <Text>{photo}</Text>
-                      </View>
+                      photo.startsWith('data:') || photo.startsWith('http') || photo.startsWith('/') || photo.includes('temp') ? (
+                        <Image
+                          key={idx}
+                          className={styles.exceptionPhotoImg}
+                          src={photo}
+                          mode="aspectFill"
+                        />
+                      ) : (
+                        <View key={idx} className={styles.exceptionPhoto}>
+                          <Text>{photo}</Text>
+                        </View>
+                      )
                     ))}
                   </View>
                 ) : null}

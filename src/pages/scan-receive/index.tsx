@@ -3,6 +3,7 @@ import { View, Text, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import StatusBadge from '@/components/StatusBadge';
+import ExceptionSection from '@/components/ExceptionSection';
 import { useAppStore } from '@/store';
 import type { HandoverRecord } from '@/types';
 import { formatDate, showToast, copyToClipboard } from '@/utils';
@@ -10,6 +11,7 @@ import { formatDate, showToast, copyToClipboard } from '@/utils';
 const ScanReceivePage: React.FC = () => {
   const handoverList = useAppStore(state => state.handoverList);
   const receiveHandover = useAppStore(state => state.receiveHandover);
+  const markHandoverException = useAppStore(state => state.markHandoverException);
   const [scanned, setScanned] = useState(false);
   const [record, setRecord] = useState<HandoverRecord | null>(null);
   const [scannedIds, setScannedIds] = useState<string[]>([]);
@@ -69,10 +71,62 @@ const ScanReceivePage: React.FC = () => {
     }, 1000);
   };
 
-  const handleException = () => {
+  const handleException = async () => {
     if (!record) return;
     console.log('[ScanReceive] 异常上报:', record.handoverNo);
-    showToast('异常已上报');
+
+    const reasons = ['器械数量不符', '包装破损', '封箱不规范', '标签缺失/模糊', '器械有污渍', '其他问题'];
+    Taro.showActionSheet({
+      itemList: reasons,
+      success: async (res) => {
+        const baseReason = reasons[res.tapIndex];
+        Taro.showModal({
+          title: '补充异常说明',
+          editable: true,
+          placeholderText: '补充说明（可选）',
+          content: '',
+          confirmText: '下一步',
+          cancelText: '取消',
+          success: async (modalRes) => {
+            if (!modalRes.confirm) return;
+            const fullReason = modalRes.content ? `${baseReason}：${modalRes.content}` : baseReason;
+            Taro.showModal({
+              title: '上传凭证照片',
+              content: '是否拍摄或上传凭证照片？',
+              confirmText: '去拍照',
+              cancelText: '直接提交',
+              success: async (photoRes) => {
+                let photos: string[] = [];
+                if (photoRes.confirm) {
+                  try {
+                    const result = await Taro.chooseImage({
+                      count: 3,
+                      sizeType: ['compressed'],
+                      sourceType: ['album', 'camera']
+                    });
+                    photos = result.tempFilePaths;
+                  } catch (e) {
+                    photos = [];
+                  }
+                }
+                markHandoverException(record.id, fullReason, photos);
+                setScannedIds([...scannedIds, record.id]);
+                showToast('异常已登记', 'success');
+                setTimeout(() => {
+                  const remaining = handoverList.filter(h => h.status === 'pending' && !scannedIds.includes(h.id) && h.id !== record.id);
+                  if (remaining.length > 0) {
+                    setRecord(remaining[0]);
+                    setScanned(true);
+                  } else {
+                    Taro.navigateBack();
+                  }
+                }, 1200);
+              }
+            });
+          }
+        });
+      }
+    });
   };
 
   return (
@@ -185,6 +239,19 @@ const ScanReceivePage: React.FC = () => {
           </>
         )}
       </View>
+
+      {scanned && record ? (
+        <ExceptionSection
+          sourceType="handover"
+          sourceId={record.id}
+          sourceNo={record.handoverNo}
+          onRegister={(reason, photos) => {
+            markHandoverException(record.id, reason, photos);
+            setScannedIds([...scannedIds, record.id]);
+            showToast('异常已登记', 'success');
+          }}
+        />
+      ) : null}
 
       <View className={styles.bottomBar}>
         <View className={`${styles.btn} ${styles.btnSecondary}`} onClick={handleScanAgain}>

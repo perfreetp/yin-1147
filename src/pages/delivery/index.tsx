@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, useDidShow } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -24,23 +24,56 @@ const filterTabs: FilterTab[] = [
 
 const DeliveryPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterTab['key']>('all');
+  const [clinicFilter, setClinicFilter] = useState<string | null>(null);
   const deliveryList = useAppStore(state => state.deliveryList);
   const receiveDelivery = useAppStore(state => state.receiveDelivery);
   const saveRecheck = useAppStore(state => state.saveRecheck);
   const getRecheckByDelivery = useAppStore(state => state.getRecheckByDelivery);
 
+  useDidShow(() => {
+    const filter = Taro.getStorageSync('dashboard_filter');
+    if (filter && typeof filter === 'object') {
+      if (filter.type === 'pendingSign') {
+        setActiveFilter('delivered');
+      }
+      if (filter.clinicId) {
+        setClinicFilter(filter.clinicId);
+      }
+      Taro.removeStorageSync('dashboard_filter');
+    }
+  });
+
   const filteredList = useMemo(() => {
-    if (activeFilter === 'all') return deliveryList;
-    return deliveryList.filter(item => item.status === activeFilter);
-  }, [deliveryList, activeFilter]);
+    let list = deliveryList;
+    if (activeFilter !== 'all') {
+      list = list.filter(item => item.status === activeFilter);
+    }
+    if (clinicFilter) {
+      list = list.filter(item => item.clinicId === clinicFilter);
+    }
+    return list;
+  }, [deliveryList, activeFilter, clinicFilter]);
 
   const stats = useMemo(() => {
+    const baseList = clinicFilter
+      ? deliveryList.filter(d => d.clinicId === clinicFilter)
+      : deliveryList;
     return {
-      shipping: deliveryList.filter(d => d.status === 'shipping').length,
-      pending: deliveryList.filter(d => d.status === 'pending').length,
-      delivered: deliveryList.filter(d => d.status === 'delivered').length
+      shipping: baseList.filter(d => d.status === 'shipping').length,
+      pending: baseList.filter(d => d.status === 'pending').length,
+      delivered: baseList.filter(d => d.status === 'delivered').length
     };
-  }, [deliveryList]);
+  }, [deliveryList, clinicFilter]);
+
+  const activeClinicName = useMemo(() => {
+    if (!clinicFilter) return null;
+    const item = deliveryList.find(d => d.clinicId === clinicFilter);
+    return item?.clinicName || null;
+  }, [deliveryList, clinicFilter]);
+
+  const clearClinicFilter = () => {
+    setClinicFilter(null);
+  };
 
   const handleItemClick = (item: DeliveryRecord) => {
     console.log('[Delivery] 点击配送单:', item.deliveryNo);
@@ -162,6 +195,11 @@ const DeliveryPage: React.FC = () => {
       </View>
 
       <ScrollView scrollY enhanced showScrollbar={false}>
+        {activeClinicName ? (
+          <View className={styles.clinicFilterBar} onClick={clearClinicFilter}>
+            <Text className={styles.clinicFilterText}>🏥 {activeClinicName}（点击清除筛选）</Text>
+          </View>
+        ) : null}
         <ScrollView className={styles.filterTabs} scrollX enhanced showScrollbar={false}>
           {filterTabs.map(tab => (
             <View
@@ -228,6 +266,33 @@ const DeliveryPage: React.FC = () => {
                     <Text className={styles.routeText}>{item.routeInfo}</Text>
                   </View>
                 ) : null}
+
+                {item.receiverName && item.receivedAt ? (
+                  <View className={styles.receiverInfo}>
+                    <Text className={styles.receiverIcon}>✅</Text>
+                    <Text className={styles.receiverText}>
+                      {item.receiverName} 签收 · {formatDate(item.receivedAt, 'MM-DD HH:mm')}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {(() => {
+                  const recheck = getRecheckByDelivery(item.id);
+                  if (!recheck) return null;
+                  const diffText = recheck.difference === 0
+                    ? '一致'
+                    : recheck.difference > 0
+                      ? `多${recheck.difference}件`
+                      : `少${Math.abs(recheck.difference)}件`;
+                  return (
+                    <View className={styles.recheckInfo}>
+                      <Text className={styles.recheckIcon}>🔍</Text>
+                      <Text className={styles.recheckText}>
+                        复点：{recheck.checkedQuantity}/{recheck.expectedQuantity} 件（{diffText}）· {recheck.operator} · {formatDate(recheck.createdAt, 'MM-DD HH:mm')}
+                      </Text>
+                    </View>
+                  );
+                })()}
 
                 <View className={styles.itemFooter}>
                   <Text className={styles.itemQuantity}>

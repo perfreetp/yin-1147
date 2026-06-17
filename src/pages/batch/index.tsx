@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, useDidShow } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -25,20 +25,65 @@ const filterTabs: FilterTab[] = [
 
 const BatchPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterTab['key']>('all');
+  const [clinicFilter, setClinicFilter] = useState<string | null>(null);
   const batchList = useAppStore(state => state.batchList);
+  const handoverList = useAppStore(state => state.handoverList);
+
+  useDidShow(() => {
+    const filter = Taro.getStorageSync('dashboard_filter');
+    if (filter && typeof filter === 'object') {
+      if (filter.type === 'processing') {
+        setActiveFilter('cleaning');
+      }
+      if (filter.clinicId) {
+        setClinicFilter(filter.clinicId);
+      }
+      Taro.removeStorageSync('dashboard_filter');
+    }
+  });
+
+  const batchClinicIdMap = useMemo(() => {
+    const map = new Map<string, string>();
+    batchList.forEach(batch => {
+      const handover = handoverList.find(h => h.id === batch.sourceHandoverIds[0]);
+      if (handover) {
+        map.set(batch.id, handover.clinicId);
+      }
+    });
+    return map;
+  }, [batchList, handoverList]);
 
   const filteredList = useMemo(() => {
-    if (activeFilter === 'all') return batchList;
-    return batchList.filter(item => item.status === activeFilter);
-  }, [batchList, activeFilter]);
+    let list = batchList;
+    if (activeFilter !== 'all') {
+      list = list.filter(item => item.status === activeFilter);
+    }
+    if (clinicFilter) {
+      list = list.filter(item => batchClinicIdMap.get(item.id) === clinicFilter);
+    }
+    return list;
+  }, [batchList, activeFilter, clinicFilter, batchClinicIdMap]);
 
   const stats = useMemo(() => {
+    const baseList = clinicFilter
+      ? batchList.filter(b => batchClinicIdMap.get(b.id) === clinicFilter)
+      : batchList;
     return {
-      processing: batchList.filter(b => ['cleaning', 'disinfecting', 'sterilizing', 'packaging'].includes(b.status)).length,
-      pending: batchList.filter(b => b.status === 'pending').length,
-      completed: batchList.filter(b => b.status === 'completed').length
+      processing: baseList.filter(b => ['cleaning', 'disinfecting', 'sterilizing', 'packaging'].includes(b.status)).length,
+      pending: baseList.filter(b => b.status === 'pending').length,
+      completed: baseList.filter(b => b.status === 'completed').length
     };
-  }, [batchList]);
+  }, [batchList, clinicFilter, batchClinicIdMap]);
+
+  const activeClinicName = useMemo(() => {
+    if (!clinicFilter) return null;
+    const item = handoverList.find(h => h.clinicId === clinicFilter);
+    return item?.clinicName || null;
+  }, [handoverList, clinicFilter]);
+
+  const clearClinicFilter = () => {
+    setClinicFilter(null);
+  };
 
   const getProgress = (item: BatchRecord) => {
     const total = item.steps.length;
@@ -77,6 +122,11 @@ const BatchPage: React.FC = () => {
       </View>
 
       <ScrollView scrollY enhanced showScrollbar={false}>
+        {activeClinicName ? (
+          <View className={styles.clinicFilterBar} onClick={clearClinicFilter}>
+            <Text className={styles.clinicFilterText}>🏥 {activeClinicName}（点击清除筛选）</Text>
+          </View>
+        ) : null}
         <ScrollView className={styles.filterTabs} scrollX enhanced showScrollbar={false}>
           {filterTabs.map(tab => (
             <View

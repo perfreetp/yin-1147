@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, useDidShow } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -10,13 +10,75 @@ import { formatDate, getDaysUntilExpire, showToast, copyToClipboard } from '@/ut
 
 const TracePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'packages' | 'reconciliation'>('packages');
+  const [traceFilter, setTraceFilter] = useState<'all' | 'expiring' | 'used'>('all');
+  const [clinicFilter, setClinicFilter] = useState<string | null>(null);
   const traceList = useAppStore(state => state.traceList);
   const reconciliationList = useAppStore(state => state.reconciliationList);
   const usePackage = useAppStore(state => state.usePackage);
   const exportReconciliation = useAppStore(state => state.exportReconciliation);
+  const handoverList = useAppStore(state => state.handoverList);
 
-  const packageList = useMemo(() => traceList, [traceList]);
-  const reconList = useMemo(() => reconciliationList, [reconciliationList]);
+  useDidShow(() => {
+    const filter = Taro.getStorageSync('dashboard_filter');
+    if (filter && typeof filter === 'object') {
+      if (filter.type === 'expiringSoon') {
+        setTraceFilter('expiring');
+        setActiveTab('packages');
+      }
+      if (filter.type === 'used') {
+        setTraceFilter('used');
+        setActiveTab('packages');
+      }
+      if (filter.clinicId) {
+        setClinicFilter(filter.clinicId);
+      }
+      Taro.removeStorageSync('dashboard_filter');
+    }
+  });
+
+  const traceClinicIdMap = useMemo(() => {
+    const map = new Map<string, string>();
+    traceList.forEach(t => {
+      const handover = handoverList.find(h => h.handoverNo === t.handoverNo);
+      if (handover) {
+        map.set(t.id, handover.clinicId);
+      }
+    });
+    return map;
+  }, [traceList, handoverList]);
+
+  const packageList = useMemo(() => {
+    let list = traceList;
+    if (clinicFilter) {
+      list = list.filter(t => traceClinicIdMap.get(t.id) === clinicFilter);
+    }
+    if (traceFilter === 'expiring') {
+      list = list.filter(t => t.status === 'valid' && getDaysUntilExpire(t.expireDate) > 0 && getDaysUntilExpire(t.expireDate) <= 7);
+    }
+    if (traceFilter === 'used') {
+      list = list.filter(t => t.status === 'used');
+    }
+    return list;
+  }, [traceList, traceFilter, clinicFilter, traceClinicIdMap]);
+
+  const reconList = useMemo(() => {
+    let list = reconciliationList;
+    if (clinicFilter) {
+      list = list.filter(r => r.clinicId === clinicFilter);
+    }
+    return list;
+  }, [reconciliationList, clinicFilter]);
+
+  const activeClinicName = useMemo(() => {
+    if (!clinicFilter) return null;
+    const item = handoverList.find(h => h.clinicId === clinicFilter);
+    return item?.clinicName || null;
+  }, [handoverList, clinicFilter]);
+
+  const clearClinicFilter = () => {
+    setClinicFilter(null);
+    setTraceFilter('all');
+  };
 
   const handleScanTrace = () => {
     console.log('[Trace] 扫码追溯');
@@ -174,6 +236,26 @@ const TracePage: React.FC = () => {
 
         {activeTab === 'packages' ? (
           <>
+            {activeClinicName ? (
+              <View className={styles.clinicFilterBar} onClick={clearClinicFilter}>
+                <Text className={styles.clinicFilterText}>🏥 {activeClinicName}（点击清除筛选）</Text>
+              </View>
+            ) : null}
+            <View className={styles.traceFilterTabs}>
+              {[
+                { key: 'all', label: '全部' },
+                { key: 'expiring', label: '快过期' },
+                { key: 'used', label: '已使用' }
+              ].map(tab => (
+                <View
+                  key={tab.key}
+                  className={classnames(styles.traceFilterTab, traceFilter === tab.key && styles.traceFilterActive)}
+                  onClick={() => setTraceFilter(tab.key as 'all' | 'expiring' | 'used')}
+                >
+                  {tab.label}
+                </View>
+              ))}
+            </View>
             <View className={styles.searchBar}>
               <Text className={styles.searchIcon}>🔍</Text>
               <Text className={styles.searchPlaceholder}>搜索包裹编号/名称</Text>
