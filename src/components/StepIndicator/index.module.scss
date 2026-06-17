@@ -1,0 +1,83 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.stepItem {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  padding-bottom: $spacing-lg;
+
+  &:last-child {
+    padding-bottom: 0;
+
+    .connector {
+      display: none;
+    }
+  }
+}
+
+.dot {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: $radius-round;
+  flex-shrink: 0;
+  margin-top: 4rpx;
+  margin-right: $spacing-md;
+  position: relative;
+  z-index: 1;
+  border: 4rpx solid $color-bg-card;
+}
+
+.dotCompleted {
+  background-color: $color-success;
+}
+
+.dotProcessing {
+  background-color: $color-primary;
+}
+
+.dotPending {
+  background-color: $color-text-tertiary;
+}
+
+.connector {
+  position: absolute;
+  left: 11rpx;
+  top: 32rpx;
+  bottom: 0;
+  width: 2rpx;
+  background-color: $color-border;
+}
+
+.connectorCompleted {
+  background-color: $color-success;
+}
+
+.stepContent {
+  flex: 1;
+  padding-bottom: $spacing-xs;
+}
+
+.stepName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.stepInfo {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.stepText {
+  color: $color-text-tertiary;
+}

@@ -1,0 +1,336 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 160rpx;
+}
+
+.scanSection {
+  background: linear-gradient(180deg, $color-primary 0%, $color-primary-light 100%);
+  padding: $page-spacing $page-padding $spacing-xl;
+  position: relative;
+}
+
+.scanHeader {
+  margin-bottom: $spacing-lg;
+}
+
+.scanTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-bottom: $spacing-xs;
+}
+
+.scanSubtitle {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.scanArea {
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 520rpx;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: $radius-lg;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scanFrame {
+  position: absolute;
+  width: 80%;
+  height: 80%;
+  border: 4rpx solid $color-primary;
+  border-radius: $radius-md;
+}
+
+.scanCorner {
+  position: absolute;
+  width: 40rpx;
+  height: 40rpx;
+  border-color: $color-primary;
+  border-style: solid;
+  border-width: 0;
+
+  &.tl {
+    top: 0;
+    left: 0;
+    border-top-width: 6rpx;
+    border-left-width: 6rpx;
+    border-top-left-radius: $radius-sm;
+  }
+
+  &.tr {
+    top: 0;
+    right: 0;
+    border-top-width: 6rpx;
+    border-right-width: 6rpx;
+    border-top-right-radius: $radius-sm;
+  }
+
+  &.bl {
+    bottom: 0;
+    left: 0;
+    border-bottom-width: 6rpx;
+    border-left-width: 6rpx;
+    border-bottom-left-radius: $radius-sm;
+  }
+
+  &.br {
+    bottom: 0;
+    right: 0;
+    border-bottom-width: 6rpx;
+    border-right-width: 6rpx;
+    border-bottom-right-radius: $radius-sm;
+  }
+}
+
+.scanLine {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 3rpx;
+  background: linear-gradient(90deg, transparent, $color-primary, transparent);
+  animation: scanMove 2s ease-in-out infinite;
+}
+
+@keyframes scanMove {
+  0%, 100% {
+    top: 10%;
+  }
+  50% {
+    top: 90%;
+  }
+}
+
+.scanIcon {
+  font-size: 120rpx;
+  opacity: 0.6;
+}
+
+.scanTips {
+  margin-top: $spacing-lg;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: $font-size-sm;
+}
+
+.manualInput {
+  margin-top: $spacing-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-sm;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: $font-size-sm;
+}
+
+.manualInputBtn {
+  color: $color-text-white;
+  text-decoration: underline;
+}
+
+.resultSection {
+  padding: $page-spacing $page-padding;
+  margin-top: -$spacing-lg;
+}
+
+.resultCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.resultHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.resultNo {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.resultClinic {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-md;
+}
+
+.resultStats {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.resultStat {
+  flex: 1;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  text-align: center;
+}
+
+.resultStatValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+  display: block;
+}
+
+.resultStatLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.sectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin: $spacing-md 0;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.sectionIcon {
+  font-size: $font-size-md;
+}
+
+.itemList {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-card;
+  overflow: hidden;
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md $spacing-lg;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.itemInfo {
+  flex: 1;
+}
+
+.itemName {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.itemCategory {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.itemQuantity {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.itemRemark {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  margin-top: 4rpx;
+  text-align: right;
+}
+
+.photoSection {
+  margin-top: $spacing-md;
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.photoItem {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: $radius-sm;
+  overflow: hidden;
+}
+
+.photoImage {
+  width: 100%;
+  height: 100%;
+}
+
+.bottomBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  gap: $spacing-md;
+}
+
+.btn {
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.btnSecondary {
+  background: $color-bg-hover;
+  color: $color-text-primary;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+}
+
+.emptyState {
+  padding: $spacing-xl $spacing-lg;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 80rpx;
+  opacity: 0.5;
+  margin-bottom: $spacing-md;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}
