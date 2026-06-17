@@ -8,7 +8,7 @@ import StepIndicator from '@/components/StepIndicator';
 import ExceptionSection from '@/components/ExceptionSection';
 import { useAppStore } from '@/store';
 import type { DeliveryRecord } from '@/types';
-import { formatDate, showToast, getDaysUntilExpire } from '@/utils;
+import { formatDate, showToast, getDaysUntilExpire } from '@/utils';
 
 const DeliveryDetailPage: React.FC = () => {
   const router = useRouter();

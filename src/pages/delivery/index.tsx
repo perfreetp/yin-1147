@@ -26,6 +26,8 @@ const DeliveryPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterTab['key']>('all');
   const deliveryList = useAppStore(state => state.deliveryList);
   const receiveDelivery = useAppStore(state => state.receiveDelivery);
+  const saveRecheck = useAppStore(state => state.saveRecheck);
+  const getRecheckByDelivery = useAppStore(state => state.getRecheckByDelivery);
 
   const filteredList = useMemo(() => {
     if (activeFilter === 'all') return deliveryList;
@@ -77,10 +79,52 @@ const DeliveryPage: React.FC = () => {
   const handleRecheck = (item: DeliveryRecord, e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('[Delivery] 复点货物:', item.deliveryNo);
-    showToast('进入复点流程');
-    Taro.navigateTo({
-      url: `/pages/delivery-detail/index?id=${item.id}`
-    });
+    const existingRecheck = getRecheckByDelivery(item.id);
+    if (existingRecheck) {
+      const diffText = existingRecheck.difference === 0
+        ? '数量一致'
+        : existingRecheck.difference > 0
+          ? `多出 ${existingRecheck.difference} 件`
+          : `缺少 ${Math.abs(existingRecheck.difference)} 件`;
+      Taro.showModal({
+        title: '已有复点记录',
+        content: `复点数量：${existingRecheck.checkedQuantity} 件\n应收数量：${existingRecheck.expectedQuantity} 件\n${diffText}\n复点人：${existingRecheck.operator}\n复点时间：${formatDate(existingRecheck.createdAt, 'MM-DD HH:mm')}`,
+        confirmText: '查看详情',
+        cancelText: '关闭',
+        success: (res) => {
+          if (res.confirm) {
+            Taro.navigateTo({
+              url: `/pages/delivery-detail/index?id=${item.id}`
+            });
+          }
+        }
+      });
+    } else {
+      Taro.showModal({
+        title: '收货复点',
+        editable: true,
+        placeholderText: '请输入复点数量',
+        content: String(item.totalQuantity),
+        success: (res) => {
+          if (res.confirm && res.content) {
+            const checkedQty = parseInt(res.content, 10) || item.totalQuantity;
+            const diff = checkedQty - item.totalQuantity;
+            const diffText = diff === 0 ? '数量一致' : diff > 0 ? `数量多出 ${diff} 件` : `数量缺少 ${Math.abs(diff)} 件`;
+            Taro.showModal({
+              title: '确认复点结果',
+              content: `复点数量：${checkedQty} 件\n${diffText}`,
+              confirmText: '确认保存',
+              success: (modalRes) => {
+                if (modalRes.confirm) {
+                  saveRecheck(item.id, checkedQty, item.receiverName || '王护士', diffText);
+                  showToast('复点记录已保存', 'success');
+                }
+              }
+            });
+          }
+        }
+      });
+    }
   };
 
   const renderActionBtn = (item: DeliveryRecord) => {
@@ -88,7 +132,10 @@ const DeliveryPage: React.FC = () => {
       return <View className={styles.signBtn} onClick={(e) => handleSign(item, e as any)}>确认签收</View>;
     }
     if (item.status === 'received') {
-      return <View className={styles.recheckBtn} onClick={(e) => handleRecheck(item, e as any)}>收货复点</View>;
+      const recheck = getRecheckByDelivery(item.id);
+      const btnText = recheck ? '复点记录' : '收货复点';
+      const btnClass = recheck ? styles.recheckedBtn : styles.recheckBtn;
+      return <View className={btnClass} onClick={(e) => handleRecheck(item, e as any)}>{btnText}</View>;
     }
     return <Text className={styles.itemTime}>{formatDate(item.createdAt, 'MM-DD HH:mm')}</Text>;
   };
